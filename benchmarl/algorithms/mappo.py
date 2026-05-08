@@ -51,6 +51,7 @@ class Mappo(Algorithm):
         share_param_critic: bool,
         clip_epsilon: float,
         entropy_coef: bool,
+        entropy_coef_decay: bool,
         critic_coef: float,
         loss_critic_type: str,
         lmbda: float,
@@ -64,6 +65,7 @@ class Mappo(Algorithm):
         self.share_param_critic = share_param_critic
         self.clip_epsilon = clip_epsilon
         self.entropy_coef = entropy_coef
+        self.entropy_coef_decay = entropy_coef_decay
         self.critic_coef = critic_coef
         self.loss_critic_type = loss_critic_type
         self.lmbda = lmbda
@@ -103,11 +105,19 @@ class Mappo(Algorithm):
         )
         return loss_module, False
 
+
     def _get_parameters(self, group: str, loss: ClipPPOLoss) -> Dict[str, Iterable]:
         return {
             "loss_objective": list(loss.actor_network_params.flatten_keys().values()),
             "loss_critic": list(loss.critic_network_params.flatten_keys().values()),
         }
+    def entropy_decay(self, group: str, losses: dict, training_rate: float):
+        training_rate = torch.tensor(training_rate, dtype=torch.float32)
+        init_entropy = self.entropy_coef
+        if self.entropy_coef_decay:
+            new_entropy = init_entropy * (1.0 - 0.99 * training_rate)
+            if hasattr(losses[group], "entropy_coeff"):
+                losses[group].entropy_coeff = new_entropy
 
     def _get_policy_for_loss(
         self, group: str, model_config: ModelConfig, continuous: bool
@@ -125,7 +135,8 @@ class Mappo(Algorithm):
         actor_input_spec = Composite(
             {group: self.observation_spec[group].clone().to(self.device)}
         )
-
+        print("actor input spec: ", actor_input_spec)
+        print("actor action spec: ", self.action_spec[group, "action"])
         actor_output_spec = Composite(
             {
                 group: Composite(
@@ -134,6 +145,7 @@ class Mappo(Algorithm):
                 )
             }
         )
+        print("actor output spec: ", actor_output_spec)
         actor_module = model_config.get_model(
             input_spec=actor_input_spec,
             output_spec=actor_output_spec,
@@ -294,7 +306,8 @@ class Mappo(Algorithm):
             critic_input_spec = Composite(
                 {group: self.observation_spec[group].clone().to(self.device)}
             )
-
+        print("critic input spec: ", critic_input_spec)
+        print("critic output spec: ", critic_output_spec)
         value_module = self.critic_model_config.get_model(
             input_spec=critic_input_spec,
             output_spec=critic_output_spec,
@@ -326,6 +339,7 @@ class MappoConfig(AlgorithmConfig):
     share_param_critic: bool = MISSING
     clip_epsilon: float = MISSING
     entropy_coef: float = MISSING
+    entropy_coef_decay: bool = MISSING
     critic_coef: float = MISSING
     loss_critic_type: str = MISSING
     lmbda: float = MISSING

@@ -15,6 +15,12 @@ from .mappo import Mappo, MappoConfig
 from .masac import Masac, MasacConfig
 from .qmix import Qmix, QmixConfig
 from .vdn import Vdn, VdnConfig
+from .larl import Larl, LarlConfig
+from .L2M2 import L2M2, L2M2Config
+from .larlpassage import Larlpassage, LarlpassageConfig
+from .larlmgw import Larlmgw, LarlmgwConfig
+from .larlwheel import Larlwheel, LarlwheelConfig
+from .larlcustomgw import Larlcustomgw, LarlcustomgwConfig
 
 classes = [
     "Iddpg",
@@ -35,6 +41,18 @@ classes = [
     "QmixConfig",
     "Vdn",
     "VdnConfig",
+    "Larl",
+    "LarlConfig",
+    "L2M2",
+    "L2M2Config",
+    "Larlpassage",
+    "LarlpassageConfig",
+    "Larlmgw",
+    "LarlmgwConfig",
+    "Larlwheel",
+    "LarlwheelConfig",
+    "Larlcustomgw",
+    "LarlcustomgwConfig",
 ]
 
 # A registry mapping "algoname" to its config dataclass
@@ -49,4 +67,10 @@ algorithm_config_registry = {
     "qmix": QmixConfig,
     "vdn": VdnConfig,
     "iql": IqlConfig,
+    "larl": LarlConfig,
+    "l2m2": L2M2Config,
+    "larlpassage": LarlpassageConfig,
+    "larlmgw": LarlmgwConfig,
+    "larlwheel": LarlwheelConfig,
+    "larlcustomgw": LarlcustomgwConfig,
 }

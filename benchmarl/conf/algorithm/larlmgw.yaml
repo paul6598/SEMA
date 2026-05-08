@@ -1,5 +1,5 @@
 defaults:
-  - mappo_config
+  - larlmgw_config
   - _self_
 
 
@@ -14,3 +14,6 @@ lmbda: 0.99
 scale_mapping: "biased_softplus_1.0"
 use_tanh_normal: True
 minibatch_advantage: False
+LLM_interval: 40
+LLM_interval_decay: True
+intention_vector_size: 16

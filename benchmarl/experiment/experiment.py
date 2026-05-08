@@ -14,8 +14,9 @@ import pickle
 import shutil
 import time
 import warnings
+import uuid
 from collections import deque, OrderedDict
-from dataclasses import dataclass, MISSING
+from dataclasses import dataclass, MISSING, field
 from pathlib import Path
 
 from typing import Any, Dict, List, Optional, Union
@@ -72,6 +73,7 @@ class ExperimentConfig:
 
     gamma: float = MISSING
     lr: float = MISSING
+    use_lr_decay: bool = MISSING
     adam_eps: float = MISSING
     adam_extra_kwargs: Dict[str, Any] = MISSING
     clip_grad_norm: bool = MISSING
@@ -104,14 +106,19 @@ class ExperimentConfig:
     off_policy_prb_beta: float = MISSING
 
     evaluation: bool = MISSING
-    render: bool = MISSING
+    use_render: bool = MISSING
     evaluation_interval: int = MISSING
     evaluation_episodes: int = MISSING
     evaluation_deterministic_actions: bool = MISSING
     evaluation_static: bool = MISSING
 
-    loggers: List[str] = MISSING
+    use_wandb: bool = MISSING
+    use_csv: bool = MISSING
+    use_tensorboard: bool = MISSING
+    use_mflow: bool = MISSING
     project_name: str = MISSING
+    entity_name: str = MISSING
+    description: str = MISSING
     wandb_extra_kwargs: Dict[str, Any] = MISSING
     create_json: bool = MISSING
 
@@ -122,6 +129,18 @@ class ExperimentConfig:
     checkpoint_at_end: bool = MISSING
     keep_checkpoints_num: Optional[int] = MISSING
     exclude_buffer_from_checkpoint: bool = MISSING
+
+    loggers: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.use_wandb:
+            self.loggers.append("wandb")
+        if self.use_csv:
+            self.loggers.append("csv")
+        if self.use_tensorboard:
+            self.loggers.append("tensorboard")
+        if self.use_mflow:
+            self.loggers.append("mflow")
 
     def train_batch_size(self, on_policy: bool) -> int:
         """
@@ -504,10 +523,8 @@ class Experiment(CallbackNotifier):
 
     def _setup_algorithm(self):
         self.algorithm = self.algorithm_config.get_algorithm(experiment=self)
-
         self.test_env = self.algorithm.process_env_fun(lambda: self.test_env)()
         self.env_func = self.algorithm.process_env_fun(self.env_func)
-
         self.replay_buffers = {
             group: self.algorithm.get_replay_buffer(
                 group=group,
@@ -535,6 +552,11 @@ class Experiment(CallbackNotifier):
             }
             for group in self.group_map.keys()
         }
+
+    def lr_decay(self, group: str, training_rate: float):
+        for _, optimizer in self.optimizers[group].items():
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = self.config.lr * (1 - training_rate)
 
     def _setup_collector(self):
         self.policy = self.algorithm.get_policy_for_collection()
@@ -574,6 +596,7 @@ class Experiment(CallbackNotifier):
         )
         self.environment_name = self.task.env_name().lower()
         self.task_name = self.task.name.lower()
+        self.description = self.config.description.lower()
         self._checkpointed_files = deque([])
 
         if self.config.save_folder is not None:
@@ -594,9 +617,10 @@ class Experiment(CallbackNotifier):
                     save_folder = Path(os.getcwd())
 
         if self.config.restore_file is None:
-            self.name = generate_exp_name(
-                f"{self.algorithm_name}_{self.task_name}_{self.model_name}", ""
-            )
+            # self.name = generate_exp_name(
+            #     self.algorithm_name, self.description
+            # )
+            self.name = f"{self.algorithm_name}_{str(uuid.uuid4())[:4]}_{self.description}_seed{self.seed}"
             self.folder_name = save_folder / self.name
 
         else:
@@ -627,6 +651,7 @@ class Experiment(CallbackNotifier):
             "on_policy": self.on_policy,
             "algorithm_name": self.algorithm_name,
             "model_name": self.model_name,
+            "description": self.description,
             "task_name": self.task_name,
             "environment_name": self.environment_name,
             "seed": self.seed,
@@ -637,11 +662,13 @@ class Experiment(CallbackNotifier):
             experiment_config=self.config,
             algorithm_name=self.algorithm_name,
             model_name=self.model_name,
+            description=self.description,
             environment_name=self.environment_name,
             task_name=self.task_name,
             group_map=self.group_map,
             seed=self.seed,
             project_name=self.config.project_name,
+            entity_name=self.config.entity_name,
             wandb_extra_kwargs={
                 **self.config.wandb_extra_kwargs,
                 "config": hparams_kwargs,
@@ -730,6 +757,8 @@ class Experiment(CallbackNotifier):
 
             # Loop over groups
             training_start = time.time()
+            max_frames = self.config.get_max_n_frames(self.on_policy)
+            training_rate = max(0.0, min(1.0, self.total_frames/max_frames))
             for group in self.train_group_map.keys():
                 group_batch = batch.exclude(*self._get_excluded_keys(group)).to(
                     self.config.train_device
@@ -750,6 +779,10 @@ class Experiment(CallbackNotifier):
                         )
                     ):
                         training_tds.append(self._optimizer_loop(group))
+                if self.config.use_lr_decay:
+                    self.lr_decay(group, training_rate)
+                if hasattr(self.algorithm, "entropy_decay"):
+                    self.algorithm.entropy_decay(group, self.losses, training_rate)
                 training_td = torch.stack(training_tds)
                 self.logger.log_training(
                     group, training_td, step=self.n_iters_performed
@@ -904,7 +937,7 @@ class Experiment(CallbackNotifier):
             if self.config.evaluation_deterministic_actions
             else ExplorationType.RANDOM
         ):
-            if self.task.has_render(self.test_env) and self.config.render:
+            if self.task.has_render(self.test_env) and self.config.use_render:
                 video_frames = []
 
                 def callback(env, td):

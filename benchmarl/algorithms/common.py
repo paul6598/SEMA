@@ -74,6 +74,10 @@ class Algorithm(ABC):
         self._policies_for_collection = {}
 
         self._check_specs()
+        print("#" * 20 + " Algorithm initialized " + "#" * 20)
+        print(f"observation_spec : {self.observation_spec}")
+        print(f"action_spec : {self.action_spec}")
+        print(f"state_spec : {self.state_spec}")
 
     def _check_specs(self):
         if self.state_spec is not None:
@@ -208,6 +212,7 @@ class Algorithm(ABC):
 
         Returns: TensorDictModule representing the policy
         """
+
         if group not in self._policies_for_loss.keys():
             action_space = self.action_spec[group, "action"]
             continuous = not isinstance(action_space, (Categorical, OneHot))

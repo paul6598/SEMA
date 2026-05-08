@@ -1,5 +1,5 @@
 defaults:
-  - vmas_give_way_config
+  - vmas_custom_give_way_config
   - _self_
 
 

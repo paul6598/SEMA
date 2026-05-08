@@ -3,12 +3,12 @@ defaults:
   - _self_
 
 # The device for collection (e.g. cuda)
-sampling_device: "cpu"
+sampling_device: "cuda"
 # The device for training (e.g. cuda)
-train_device: "cpu"
+train_device: "cuda"
 # The device for the replay buffer of off-policy algorithms (e.g. cuda).
 # Use "disk" to store it on disk (in the experiment save_folder)
-buffer_device: "cpu"
+buffer_device: "cuda"
 
 # Whether to share the parameters of the policy within agent groups
 share_policy_params: True
@@ -21,9 +21,10 @@ collect_with_grad: False
 parallel_collection: False
 
 # Discount factor
-gamma: 0.99
+gamma: 0.999
 # Learning rate
-lr: 0.00005
+lr: 0.002
+use_lr_decay: True
 # The epsilon parameter of the adam optimizer
 adam_eps: 0.000001
 # Extra kwargs for the adam optimizer
@@ -51,19 +52,19 @@ exploration_anneal_frames: null
 # The maximum number of experiment iterations before the experiment terminates, exclusive with max_n_frames
 max_n_iters: null
 # Number of collected frames before ending, exclusive with max_n_iters
-max_n_frames: 3_000_000
+max_n_frames: 4_200_000
 
 # Number of frames collected and each experiment iteration
-on_policy_collected_frames_per_batch: 6000
+on_policy_collected_frames_per_batch: 60000
 # Number of environments used for collection
 # If the environment is vectorized, this will be the number of batched environments.
 # Otherwise batching will be simulated and each env will be run sequentially or parallelly depending on parallel_collection.
-on_policy_n_envs_per_worker: 10
+on_policy_n_envs_per_worker: 600
 # This is the number of times collected_frames_per_batch will be split into minibatches and trained
-on_policy_n_minibatch_iters: 45
+on_policy_n_minibatch_iters: 30
 # In on-policy algorithms the train_batch_size will be equal to the on_policy_collected_frames_per_batch
 # and it will be split into minibatches with this number of frames for training
-on_policy_minibatch_size: 400
+on_policy_minibatch_size: 4096
 
 # Number of frames collected and each experiment iteration
 off_policy_collected_frames_per_batch: 6000
@@ -90,7 +91,7 @@ off_policy_prb_beta: 0.4
 
 evaluation: True
 # Whether to render the evaluation (if rendering is available)
-render: True
+use_render: True
 # Frequency of evaluation in terms of collected frames (this should be a multiple of on/off_policy_collected_frames_per_batch)
 evaluation_interval: 120_000
 # Number of episodes that evaluation is run on
@@ -102,9 +103,15 @@ evaluation_deterministic_actions: True
 evaluation_static: False
 
 # List of loggers to use, options are: wandb, csv, tensorboard, mflow
-loggers: [csv,wandb]
+use_wandb: False
+use_csv: False
+use_tensorboard: False
+use_mflow: False
+
 # Wandb project name (kept for backward compatibility)
 project_name: "benchmarl"
+entity_name: "joonhuk6598-university-of-seoul"
+description: "default"
 # Wandb extra kwargs passed to the WandbLogger (~superset of wandb.init kwargs)
 # WandbLogger includes: offline, save_dir, project, video_fps
 # wandb.init includes: entity, tags, notes, etc.

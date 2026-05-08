@@ -4,6 +4,9 @@
 **/outputs/
 **/multirun/
 
+analysis/data/
+analysis/plots/
+
 # Docs
 docs/output/
 docs/source/generated/

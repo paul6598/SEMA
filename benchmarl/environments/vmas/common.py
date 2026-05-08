@@ -94,6 +94,7 @@ class VmasTask(Task):
     DISPERSION = None
     MULTI_GIVE_WAY = None
     DROPOUT = None
+    CUSTOM_GIVE_WAY = None
     GIVE_WAY = None
     WIND_FLOCKING = None
     PASSAGE = None

@@ -36,9 +36,11 @@ class Logger:
         environment_name: str,
         task_name: str,
         model_name: str,
+        description: str,
         group_map: Dict[str, List[str]],
         seed: int,
         project_name: str,
+        entity_name: str,
         wandb_extra_kwargs: Dict[str, Any],
     ):
         self.experiment_config = experiment_config
@@ -74,12 +76,25 @@ class Logger:
                     logger_name=folder_name,
                     experiment_name=experiment_name,
                     wandb_kwargs={
-                        "group": task_name,
+                        "group": f"{algorithm_name}_{description}",
                         "id": experiment_name,
-                        "project": project_name,
+                        "project": f"{project_name}_{task_name}",
+                        "entity" : entity_name,
                         **wandb_extra_kwargs,
                     },
                 )
+                # get_logger(
+                #     logger_type=logger_name,
+                #     logger_name=folder_name,
+                #     experiment_name=experiment_name,
+                #     wandb_kwargs={
+                #     "group": task_name,
+                #     "id": experiment_name,
+                #     "project": project_name,
+                #     "entity" : entity_name,
+                #     **wandb_extra_kwargs,
+                #     },
+                #     )
             )
 
     def log_hparams(self, **kwargs):
@@ -138,7 +153,19 @@ class Logger:
             )
             # group_episode_rewards has shape (n_episodes) as we took the mean over agents in the group
             groups_episode_rewards.append(group_episode_rewards)
+            if any_episode_ended:
+                # 1. 순수 환경 보상 누적값 로깅
+                if ("next", group, "episode_env_reward") in batch.keys(True):
+                    ep_env_rew = batch.get(("next", group, "episode_env_reward"))
+                    # 에이전트 평균(-2) 후, 에피소드가 끝난 시점(gobal_done)의 값만 추출합니다.
+                    mean_ep_env_rew = ep_env_rew.mean(-2)[gobal_done]
+                    self._log_min_mean_max(to_log, f"collection/{group}/reward/episode_env_reward", mean_ep_env_rew)
 
+                # 2. 서브태스크 보상 누적값 로깅 (L2M2 전용)
+                if ("next", group, "episode_subtask_reward") in batch.keys(True):
+                    ep_subtask_rew = batch.get(("next", group, "episode_subtask_reward"))
+                    mean_ep_subtask_rew = ep_subtask_rew.mean(-2)[gobal_done]
+                    self._log_min_mean_max(to_log, f"collection/{group}/reward/episode_subtask_reward", mean_ep_subtask_rew)
             if "info" in batch.get(("next", group)).keys():
                 to_log.update(
                     {
@@ -202,16 +229,41 @@ class Logger:
 
         to_log = {}
         json_metrics = {}
+        # for group in self.group_map.keys():
+        #     # returns has shape (n_episodes)
+        #     returns = torch.stack(
+        #         [self._get_reward(group, td).sum(0).mean() for td in rollouts],
+        #         dim=0,
+        #     )
+        #     self._log_min_mean_max(
+        #         to_log, f"eval/{group}/reward/episode_reward", returns
+        #     )
+        #     json_metrics[group + "_return"] = returns
+
         for group in self.group_map.keys():
-            # returns has shape (n_episodes)
+            # 1. 평가용 리워드 (순수 env_reward가 있으면 쓰고, 없으면 기존 _get_reward 사용)
             returns = torch.stack(
-                [self._get_reward(group, td).sum(0).mean() for td in rollouts],
+                [
+                    td.get(("next", group, "env_reward"), self._get_reward(group, td)).sum(0).mean() 
+                    for td in rollouts
+                ],
                 dim=0,
             )
+            
             self._log_min_mean_max(
                 to_log, f"eval/{group}/reward/episode_reward", returns
             )
             json_metrics[group + "_return"] = returns
+
+            # 2. 서브태스크 보상 로깅 (L2M2 모델을 돌릴 때만 작동)
+            if ("next", group, "subtask_reward") in rollouts[0].keys(True):
+                subtask_returns = torch.stack(
+                    [td.get(("next", group, "subtask_reward")).sum(0).mean() for td in rollouts],
+                    dim=0,
+                )
+                self._log_min_mean_max(
+                    to_log, f"eval/{group}/reward/episode_subtask_reward", subtask_returns
+                )
 
         mean_group_return = self._log_global_episode_reward(
             list(json_metrics.values()), to_log, prefix="eval"

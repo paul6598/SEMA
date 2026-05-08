@@ -59,7 +59,6 @@ class Mlp(Model):
             ]
         )
         self.output_features = self.output_leaf_spec.shape[-1]
-
         if self.input_has_agent_dim:
             self.mlp = MultiAgentMLP(
                 n_agent_inputs=self.input_features,
@@ -123,6 +122,8 @@ class Mlp(Model):
 
     def _forward(self, tensordict: TensorDictBase) -> TensorDictBase:
         # Gather in_key and flatten the last self.num_feature_dims dimensions
+        #print("#"*20)
+
         input = torch.cat(
             [
                 torch.flatten(tensordict.get(in_key), start_dim=-self.num_feature_dims)
@@ -130,7 +131,10 @@ class Mlp(Model):
             ],
             dim=-1,
         )
-
+        # print("input shape", input.shape)
+        # print("first value of agent 1", input[0, 0, :])
+        # print("first value of agent 2", input[0, 1, :])
+        
         # Has multi-agent input dimension
         if self.input_has_agent_dim:
             res = self.mlp.forward(input)
