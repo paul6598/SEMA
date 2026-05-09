@@ -28,7 +28,7 @@ INTENTION_VECTOR=4
 SUBTASK_SIZE=5
 
 EXTRA_ARGS=""
-if [ "$ALGO" == "larl" ]; then
+if [ "$ALGO" == "sema" ]; then
     EXTRA_ARGS="algorithm.LLM_interval=$LLM_INTERVAL \
                 algorithm.LLM_interval_decay=$LLM_INTERVAL_DECAY \
                 algorithm.intention_vector_size=$INTENTION_VECTOR"

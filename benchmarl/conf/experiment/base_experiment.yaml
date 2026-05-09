@@ -110,7 +110,6 @@ use_mflow: False
 
 # Wandb project name (kept for backward compatibility)
 project_name: "benchmarl"
-entity_name: "joonhuk6598-university-of-seoul"
 description: "default"
 # Wandb extra kwargs passed to the WandbLogger (~superset of wandb.init kwargs)
 # WandbLogger includes: offline, save_dir, project, video_fps

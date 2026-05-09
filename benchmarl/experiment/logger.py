@@ -40,7 +40,6 @@ class Logger:
         group_map: Dict[str, List[str]],
         seed: int,
         project_name: str,
-        entity_name: str,
         wandb_extra_kwargs: Dict[str, Any],
     ):
         self.experiment_config = experiment_config
@@ -79,22 +78,10 @@ class Logger:
                         "group": f"{algorithm_name}_{description}",
                         "id": experiment_name,
                         "project": f"{project_name}_{task_name}",
-                        "entity" : entity_name,
                         **wandb_extra_kwargs,
                     },
                 )
-                # get_logger(
-                #     logger_type=logger_name,
-                #     logger_name=folder_name,
-                #     experiment_name=experiment_name,
-                #     wandb_kwargs={
-                #     "group": task_name,
-                #     "id": experiment_name,
-                #     "project": project_name,
-                #     "entity" : entity_name,
-                #     **wandb_extra_kwargs,
-                #     },
-                #     )
+
             )
 
     def log_hparams(self, **kwargs):

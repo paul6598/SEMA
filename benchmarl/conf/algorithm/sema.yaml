@@ -1,5 +1,5 @@
 defaults:
-  - larl_config
+  - sema_config
   - _self_
 
 

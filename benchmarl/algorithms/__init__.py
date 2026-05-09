@@ -15,7 +15,7 @@ from .mappo import Mappo, MappoConfig
 from .masac import Masac, MasacConfig
 from .qmix import Qmix, QmixConfig
 from .vdn import Vdn, VdnConfig
-from .larl import Larl, LarlConfig
+from .sema import Sema, SemaConfig
 from .L2M2 import L2M2, L2M2Config
 from .larlpassage import Larlpassage, LarlpassageConfig
 from .larlmgw import Larlmgw, LarlmgwConfig
@@ -41,8 +41,8 @@ classes = [
     "QmixConfig",
     "Vdn",
     "VdnConfig",
-    "Larl",
-    "LarlConfig",
+    "Sema",
+    "SemaConfig",
     "L2M2",
     "L2M2Config",
     "Larlpassage",
@@ -67,7 +67,7 @@ algorithm_config_registry = {
     "qmix": QmixConfig,
     "vdn": VdnConfig,
     "iql": IqlConfig,
-    "larl": LarlConfig,
+    "sema": SemaConfig,
     "l2m2": L2M2Config,
     "larlpassage": LarlpassageConfig,
     "larlmgw": LarlmgwConfig,

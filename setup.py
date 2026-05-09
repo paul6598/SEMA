@@ -42,10 +42,10 @@ extra_files = package_files(
 setup(
     name="benchmarl",
     version=get_version(),
-    description="BenchMARL",
-    url="https://github.com/facebookresearch/BenchMARL",
-    author="Matteo Bettini",
-    author_email="mb2389@cl.cam.ac.uk",
+    description="Implementation of SEMA based on BenchMARL",
+    url="https://github.com/paul6598/SEMA",
+    author="Joonhyeok Eom",
+    author_email="paul6598@uos.ac.kr",
     install_requires=[
         "torchrl>=0.10,<0.12",
         "tqdm",
@@ -53,6 +53,13 @@ setup(
         "torchvision",
         "av<14",
         "numpy",
+        "matplotlib",
+        "pandas",
+        "scikit_learn",
+        "vllm",
+        "sentence_transformers",
+        "transformers",
+        "rliable",
     ],
     extras_require={
         "vmas": ["vmas>=1.3.4"],

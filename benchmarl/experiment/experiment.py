@@ -117,7 +117,6 @@ class ExperimentConfig:
     use_tensorboard: bool = MISSING
     use_mflow: bool = MISSING
     project_name: str = MISSING
-    entity_name: str = MISSING
     description: str = MISSING
     wandb_extra_kwargs: Dict[str, Any] = MISSING
     create_json: bool = MISSING
@@ -668,7 +667,6 @@ class Experiment(CallbackNotifier):
             group_map=self.group_map,
             seed=self.seed,
             project_name=self.config.project_name,
-            entity_name=self.config.entity_name,
             wandb_extra_kwargs={
                 **self.config.wandb_extra_kwargs,
                 "config": hparams_kwargs,

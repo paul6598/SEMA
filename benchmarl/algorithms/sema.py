@@ -52,7 +52,7 @@ class TextFusionModule(nn.Module):
         compressed = self.compressor(sbert)
         return torch.cat([obs, compressed], dim=-1)
 
-class Larl(Algorithm):
+class Sema(Algorithm):
     """Multi Agent PPO (from `https://arxiv.org/abs/2103.01955 <https://arxiv.org/abs/2103.01955>`__).
 
     Args:
@@ -503,7 +503,7 @@ class Larl(Algorithm):
         return value_module
     
 class LLM_Intention(Transform):
-    def __init__(self, algorithm: Larl, group: str):
+    def __init__(self, algorithm: Sema, group: str):
         super().__init__(
             in_keys=[(group, "observation")], 
             out_keys=[
@@ -527,56 +527,7 @@ class LLM_Intention(Transform):
         raw_vector = raw_vector.view(batch_size, n_agents, -1)
         return raw_vector 
 
-    # def _obs_to_text(self, obs_tensor): # torch.Size([envs_workers, n_agents, obs_dim])
-    #     # Original give way.
-    #     obs_cpu = obs_tensor.cpu().numpy() # 한 번에 CPU로 내림
-    #     if self.prev_text is None or len(self.prev_text) != obs_cpu.shape[0]:
-    #         self.prev_text = [["None", "None"] for _ in range(obs_cpu.shape[0])]
-    #     text_batch = []
-    #     for i in range(obs_cpu.shape[0]):
-    #         agent_texts = []
-    #         for j in range(obs_cpu.shape[1]):
-    #             pos_x, pos_y, vel_x, vel_y = obs_cpu[i, j, 2:6]
-    #             text = (f"Agent {j+1}: Position({pos_x:.1f}, {pos_y:.1f}), "
-    #                     f"Velocity({vel_x:.2f}, {vel_y:.2f})")
-    #             agent_texts.append({"type": "text", "text": text})
 
-    #         base_prompt = [
-    #         {
-    #             "role": "system",
-    #             "content": [{
-    #                 "type": "text", 
-    #                 "text": (
-    #                     "You are a Strategic Commander for a multi-agent system. Goal: Solve the 'Narrow Corridor Swap'.\n"
-    #                     "MAP SPECIFICATIONS:\n"
-    #                     "- Corridor: x-axis from -2.5 (Left) to 2.5 (Right). Width (y) is narrow.\n"
-    #                     "- Refuge: Located at x=0, deep in y direction (y > 0.4).\n"
-    #                     "- Goal: Agent 1 (starts left, should go right) must reach x > 2.0. Agent 2 (starts right, should go left) must reach x < -2.0.\n"
-    #                     #"COLLISION RULE: Simultaneous movement in the narrow corridor (y ≈ 0) when agents are passing each other will cause failure.\n" 
-    #                     #"YIELDING RULE: If agents are dangerously close in the center (|pos_x| < 0.5) and have not passed each other, one MUST yield by moving into the refuge, while other MUST proceed through the corridor without yielding.\n"
-    #                     "COLLISION RULE: Simultaneous movement in the narrow corridor when agents are passing each other will cause failure.\n" 
-    #                     "YIELDING RULE: If agents are dangerously close in the center and have not passed each other, one MUST yield by moving into the refuge, while other MUST proceed through the corridor without yielding.\n"
-    #                 )
-    #             }]
-    #         },
-    #         {
-    #             "role": "user",
-    #             "content": [
-    #                 {"type": "text", "text": "ENVIRONMENT: Narrow corridor with one asymmetric refuge at pos_x=0."},
-    #                 *agent_texts,
-    #                 {"type": "text", "text": (
-    #                     "OUTPUT FORMAT:"
-    #                     "Write your analysis about the spatial relationship first in plain text. Then, provide the instructions STRICTLY as a JSON list of TWO SHORT STRINGS."
-    #                     "Example Output:"
-    #                     "Step 1: <Analyze the strategic situation based on the coordinates and MAP SPECIFICATIONS **in 2~3 brief sentences**.>\n"  # Answer yes or no to whether they have passed each other, and briefly compare their positions.
-    #                     "[\"instruction for Agent 1 here\", \"instruction for Agent 2 here\"]"                    
-    #                 )}
-    #             ]
-    #         }
-    #     ]
-
-    #         text_batch.append(base_prompt)
-    #     return text_batch
     def _obs_to_text(self, obs_tensor): # torch.Size([envs_workers, n_agents, obs_dim])
         # Updated give way with refuge at x=-1.25. and penalty for collision only when they are colliding.
         obs_cpu = obs_tensor.cpu().numpy() # 한 번에 CPU로 내림
@@ -693,24 +644,20 @@ class LLM_Intention(Transform):
                     sbert_device = final_raw_vector.to(self.algorithm.device)
                     compressed_vector = self.algorithm.actor_mlp.compressor(sbert_device)
 
-                for i in range(min(3, len(intention))):  # 최대 3개까지만 로그에 포함
-                    log_data = {
-                        "text": intention[i], # 예: ["Agent 1: wait", "Agent 2: move"]
-                        "vector": compressed_vector[i].cpu().tolist() # [agent수, 4] 형태
-                    }
+                # for i in range(min(3, len(intention))): 
+                #     log_data = {
+                #         "text": intention[i], # 예: ["Agent 1: wait", "Agent 2: move"]
+                #         "vector": compressed_vector[i].cpu().tolist() # [agent수, 4] 형태
+                #     }
                     
-                    # 파일에 추가 (jsonlines 방식), training_rate 0.1 단위로 tsne_data_0.x.jsonl에 저장
-                    with open(f"tsne_data_0.{int(self.algorithm.training_rate * 10)}_new.jsonl", "a", encoding="utf-8") as f:
-                        f.write(json.dumps(log_data, ensure_ascii=False) + "\n") 
-                # print(f"Logged LLM intention and vector at training rate {self.algorithm.training_rate:.2f}")          
+                #     with open(f"tsne_data_0.{int(self.algorithm.training_rate * 10)}_new.jsonl", "a", encoding="utf-8") as f:
+                #         f.write(json.dumps(log_data, ensure_ascii=False) + "\n")     
 
         else:
             final_raw_vector = prev_raw_vector
 
         next_tensordict.set((self.group, "observation"), curr_obs)
         next_tensordict.set((self.group, "sbert_embedding"), final_raw_vector)
-
-        #print(f"Training rate: {getattr(self.algorithm, 'training_rate', 1.0)}")
 
         return next_tensordict
     
@@ -741,8 +688,8 @@ class LLM_Intention(Transform):
         return observation_spec
 
 @dataclass
-class LarlConfig(AlgorithmConfig):
-    """Configuration dataclass for :class:`~benchmarl.algorithms.Larl`."""
+class SemaConfig(AlgorithmConfig):
+    """Configuration dataclass for :class:`~benchmarl.algorithms.Sema`."""
 
     share_param_critic: bool = MISSING
     clip_epsilon: float = MISSING
@@ -762,7 +709,7 @@ class LarlConfig(AlgorithmConfig):
 
     @staticmethod
     def associated_class() -> Type[Algorithm]:
-        return Larl
+        return Sema
 
     @staticmethod
     def supports_continuous_actions() -> bool:
