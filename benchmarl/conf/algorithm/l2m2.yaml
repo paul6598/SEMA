@@ -14,6 +14,6 @@ lmbda: 0.99
 scale_mapping: "biased_softplus_1.0"
 use_tanh_normal: True
 minibatch_advantage: False
-LLM_interval: 40
+LLM_interval: 50
 LLM_interval_decay: False
 subtask_size: 5

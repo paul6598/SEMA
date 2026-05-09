@@ -29,6 +29,8 @@ DONE_ON_COMPLETION=false
 N_WORKERS=100
 LLM_INTERVAL=50
 INTENTION_VECTOR=4
+SAVE_MLP=false
+LOAD_MLP=false
 SUBTASK_SIZE=5
 
 
@@ -36,7 +38,7 @@ SUBTASK_SIZE=5
 EXTRA_ARGS=""
 if [ "$ALGO" == "sema" ]; then
     EXTRA_ARGS="algorithm.LLM_interval=$LLM_INTERVAL \
-                algorithm.intention_vector_size=$INTENTION_VECTOR \
+                algorithm.intention_vector_size=$INTENTION_VECTOR"
 fi
 
 if [ "$ALGO" == "l2m2" ]; then

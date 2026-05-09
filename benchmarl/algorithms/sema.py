@@ -537,7 +537,7 @@ class LLM_Intention(Transform):
         for i in range(obs_cpu.shape[0]):
             agent_texts = []
             for j in range(obs_cpu.shape[1]):
-                pos_x, pos_y, vel_x, vel_y = obs_cpu[i, j, 2:6]
+                pos_x, pos_y, vel_x, vel_y = obs_cpu[i, j, -4:]
                 text = (f"Agent {j+1}: Position({pos_x:.1f}, {pos_y:.1f}), "
                         f"Velocity({vel_x:.2f}, {vel_y:.2f})")
                 agent_texts.append({"type": "text", "text": text})

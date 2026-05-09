@@ -31,7 +31,41 @@ pip install vmas
 ## Run
 
 본 프로젝트는 `vmas/give_way` 환경에서 **SEMA** 및 베이스라인(MAPPO, L2M2 등) 모델들의 실험을 쉽게 재현할 수 있는 자동화 스크립트를 제공합니다.
+### 0. 관측정보 수정
+본 프로젝트의 모델(SEMA)은 에이전트 구분을 위해 관측 정보 맨 앞에 **Agent ID (One-hot vector)**가 포함되어야 합니다.
 
+따라서, miniconda3/envs/[가상환경 이름]/lib/python3.11/site-packages/vmas/scenarios/give_way.py 내부의 observation 함수를 다음과 같이 수정합니다.
+```python
+    def observation(self, agent: Agent):
+        n_agent = len(self.world.agents)
+        agent_idx = self.world.agents.index(agent)
+        one_hot_id = torch.zeros(n_agent, device=self.world.device)
+        one_hot_id[agent_idx] = 1.0
+        one_hot_id = one_hot_id.unsqueeze(0).expand(len(agent.state.pos), -1)
+        rel = []
+        for a in self.world.agents:
+            if a != agent:
+                rel.append(agent.state.pos - a.state.pos)
+
+
+        observations = [
+            agent.state.pos,
+            agent.state.vel,
+        ]
+        if self.observe_rel_pos:
+            observations += rel
+        if self.obs_noise > 0:
+            for i, obs in enumerate(observations):
+                noise = torch.zeros(*obs.shape, device=self.world.device,).uniform_(
+                    -self.obs_noise,
+                    self.obs_noise,
+                )
+                observations[i] = obs + noise
+        return torch.cat(
+            [one_hot_id] + observations,
+            dim=-1,
+        )
+```
 ### 1. 스크립트 실행 위치
 모든 실행 스크립트는 `scripts/` 폴더 내에 위치합니다.
 
@@ -44,6 +78,12 @@ give_way.sh 스크립트는 총 4개의 인자(Argument)를 입력받아 실행�
 
 ```bash
 bash give_way.sh [ALGO] [USE_WANDB] [USE_RENDER] [DESCRIPTION]
+"""
+ex)
+bash give_way.sh mappo true false default
+
+bash give_way.sh sema false false default
+"""
 ```
 | 인자 (Argument) | 설명 | 가능한 값 | 기본값 |
 | :--- | :--- | :--- | :--- |
