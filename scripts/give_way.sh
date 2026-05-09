@@ -6,10 +6,10 @@ export PYGLET_HEADLESS=1
 export PYOPENGL_PLATFORM=egl
 export EGL_DEVICE_ID=0
 
-# 2. 인자 받아오기
-ALGO=$1        # 예: mappo, qmix
+
+ALGO=$1        # mappo, qmix
 USE_WANDB=$2   # true or false
-USE_RENDER=$3 # true or false
+USE_RENDER=$3 # false(vllm과 충돌이 나 있어서 render는 false로 고정)
 DESCRIPTION=$4 # 실험 설명 (예: "give_way_experiment")
 
 # 3. 기본값 설정
@@ -18,21 +18,17 @@ if [ -z "$USE_WANDB" ]; then USE_WANDB="false"; fi
 if [ -z "$USE_RENDER" ]; then USE_RENDER="false"; fi
 if [ -z "$DESCRIPTION" ]; then DESCRIPTION="default"; fi
 
-# 4. 하이퍼파라미터 설정 (Hydra 키워드에 맞춰 구성)
+
 TASK=vmas/give_way
 LR=0.002
 HIDDEN_DIM=256
 CHECKPOINT_INTERVAL=0
-#MAX_N_FRAMES=1020000
 MAX_N_FRAMES=4200000
 MAX_STEPS=300
 DONE_ON_COMPLETION=false
 N_WORKERS=100
 LLM_INTERVAL=50
-LLM_INTERVAL_DECAY=false
 INTENTION_VECTOR=4
-SAVE_MLP=false
-LOAD_MLP=false
 SUBTASK_SIZE=5
 
 
@@ -40,24 +36,18 @@ SUBTASK_SIZE=5
 EXTRA_ARGS=""
 if [ "$ALGO" == "sema" ]; then
     EXTRA_ARGS="algorithm.LLM_interval=$LLM_INTERVAL \
-                algorithm.LLM_interval_decay=$LLM_INTERVAL_DECAY \
                 algorithm.intention_vector_size=$INTENTION_VECTOR \
-                algorithm.save_mlp=$SAVE_MLP \
-                algorithm.load_mlp=$LOAD_MLP"
 fi
 
 if [ "$ALGO" == "l2m2" ]; then
     EXTRA_ARGS="algorithm.LLM_interval=$LLM_INTERVAL \
-                algorithm.LLM_interval_decay=$LLM_INTERVAL_DECAY \
                 algorithm.subtask_size=$SUBTASK_SIZE"
 fi
 
-# 5. 시드별 루프 실행
 for i in 0
 do 
     echo "Starting Experiment: $ALGO on $TASK with SEED $i"
 
-    # BenchMARL 실행 (Hydra Override 문법 활용)
     python benchmarl/run.py \
         algorithm=$ALGO \
         task=$TASK \
